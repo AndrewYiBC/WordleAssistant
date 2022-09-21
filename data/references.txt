@@ -1,0 +1,7 @@
+The list of possible words (possible_words.txt) is from
+3Blue1Brown's YouTube video "Solving Wordle using information theory":
+https://www.youtube.com/watch?v=v68zYyaEmEA&t=69s
+
+In the video description, the author posted the link to the code for the video:
+https://github.com/3b1b/videos/tree/master/_2022/wordle
+Where the possible_words.txt is located in the data directory
