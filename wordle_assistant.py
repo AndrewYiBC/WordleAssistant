@@ -27,12 +27,18 @@ class WordleAssistant:
         # set of letters that are not included in the word (grey tiles)
         self.excluded_letters = set()
 
-        # DataFrame of possible words with 5 columns
-        # each column is a single letter
+        # DataFrame of possible words with 6 columns
+        # each of the first 5 columns is a single letter
+        # the last column is the entire 5-letter word
         # the list of possible words (possible_words.txt) is from 3b1b's GitHub:
         # https://github.com/3b1b/videos/tree/master/_2022/wordle
         # where the possible_words.txt is located in the data directory
         self._possible_words = self._load_possible_words("data\possible_words.txt")
+
+        # DataFrame of valid words with 6 columns
+        # valid words is a subset of possible words that
+        # satisfies all currently identified information
+        self._valid_words = self._possible_words
 
 
     def guess(self, word: str, colors: str) -> None:
@@ -52,13 +58,52 @@ class WordleAssistant:
             elif color == "*":
                 self.included_letters.add(letter)
                 self.correct_pos[pos] = letter
+            self._update_valid_words()
+    
+
+    def get_valid_words(self, verbose=False) -> list:
+        valid_words_list = self._valid_words[5].to_list()
+        if verbose:
+            lim = 10
+            count = len(valid_words_list)
+            print("There are {:d} valid words".format(count))
+            if count > lim:
+                print("Only the first {:d} words will be displayed".format(lim))
+            else:
+                lim = count
+            for word in valid_words_list[:lim]:
+                print(word)
+        return valid_words_list
+
+
+    def _update_valid_words(self) -> None:
+        incorrect_letters = set()
+        valid_df = self._valid_words
+        # select words that have included letters at correct positions
+        for pos in range(5):
+            if self.correct_pos[pos] is not None:
+                valid_df = valid_df.loc[valid_df[pos] == self.correct_pos[pos]]
+        # select words that don't have included letters at incorrect positions
+        for pos in range(5):
+            if len(self.incorrect_pos[pos]) != 0:
+                incorrect_letters = incorrect_letters | self.incorrect_pos[pos]
+                valid_df = valid_df.loc[~valid_df[pos].isin(self.incorrect_pos[pos])]
+        # select words that have included letters not at incorrect positions
+        incorrect_letters_or = "|".join(list(incorrect_letters))
+        valid_df = valid_df.loc[valid_df[5].str.contains(incorrect_letters_or)]
+        # select words that don't have not included letters
+        if len(self.excluded_letters) != 0:
+            for pos in range(5):
+                valid_df = valid_df.loc[~valid_df[pos].isin(self.excluded_letters)]
+        self._valid_words = valid_df.reset_index(drop=True)
 
 
     @staticmethod
     def _load_possible_words(path: str) -> pd.DataFrame:
         with open(path) as f:
             words = f.readlines()
-            words_split = [list(w.rstrip()) for w in words]
+            words = [w.rstrip() for w in words]
+            words_split = [list(w) + [w] for w in words]
             words_df = pd.DataFrame(words_split)
             return words_df
 
