@@ -13,12 +13,14 @@ import pandas as pd
 class WordleAssistant:
 
     def __init__(self):
-        # dictionary of letters that are included in the word
-        # each key is a single letter
-        # each value is a list of two sets:
-        # element [0] is the set of identified correct positions (green tiles)
-        # element [1] is the set of identified incorrect positions (yellow tiles)
-        self.included_letters = {}
+        # list of identified correct positions (green tiles), with 5 elements
+        # each element corresponds to the correct letter at the position
+        self.correct_pos = [None, None, None, None, None]
+        # list of identified incorrect positions (yellow tiles), with 5 elements
+        # each element corresponds to a set of incorrect letters at the position
+        self.incorrect_pos = [set(), set(), set(), set(), set()]
+        # set of letters that are included in the word (green or yellow tiles)
+        self.included_letters = set()
         # set of letters that are not included in the word (grey tiles)
         self.excluded_letters = set()
         # DataFrame of possible words with 5 columns
@@ -34,20 +36,18 @@ class WordleAssistant:
         for pos in range(5):
             letter = word[pos]
             color = colors[pos]
-            # "*" corresponds to a green tile
-            if color == "*":
-                value = self.included_letters.get(letter, [set(), set()])
-                value[0].add(pos)
-                self.included_letters[letter] = value
-            # "o" corresponds to a yellow tile
-            elif color == "o":
-                value = self.included_letters.get(letter, [set(), set()])
-                value[1].add(pos)
-                self.included_letters[letter] = value
             # "x" corresponds to a grey tile
-            elif color == "x":
+            if color == "x":
                 if letter not in self.included_letters:
                     self.excluded_letters.add(letter)
+            # "o" corresponds to a yellow tile
+            elif color == "o":
+                self.included_letters.add(letter)
+                self.incorrect_pos[pos].add(letter)
+            # "*" corresponds to a green tile
+            elif color == "*":
+                self.included_letters.add(letter)
+                self.correct_pos[pos] = letter
 
 
     @staticmethod
