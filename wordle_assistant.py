@@ -7,6 +7,7 @@ https://www.nytimes.com/games/wordle/index.html
 """
 
 
+import os
 import pandas as pd
 
 
@@ -33,7 +34,9 @@ class WordleAssistant:
         # the list of possible words (possible_words.txt) is from 3b1b's GitHub:
         # https://github.com/3b1b/videos/tree/master/_2022/wordle
         # where the possible_words.txt is located in the data directory
-        self._possible_words = self._load_possible_words("data\possible_words.txt")
+        self._possible_words = self._load_possible_words(
+            os.path.join("data", "possible_words.txt")
+        )
 
         # DataFrame of valid words with 6 columns
         # valid words is a subset of possible words that
@@ -68,11 +71,11 @@ class WordleAssistant:
             count = len(valid_words_list)
             print("There are {:d} valid words".format(count))
             if count > lim:
-                print("Only the first {:d} words will be displayed".format(lim))
+                print("Please refer to the returned list for all valid words")
             else:
-                lim = count
-            for word in valid_words_list[:lim]:
-                print(word)
+                print("All valid words:")
+                for word in valid_words_list:
+                    print(word)
         return valid_words_list
 
 
