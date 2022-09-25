@@ -92,8 +92,8 @@ class WordleAssistant:
                 incorrect_letters = incorrect_letters | self.incorrect_pos[pos]
                 valid_df = valid_df.loc[~valid_df[pos].isin(self.incorrect_pos[pos])]
         # select words that have included letters not at incorrect positions
-        incorrect_letters_or = "|".join(list(incorrect_letters))
-        valid_df = valid_df.loc[valid_df[5].str.contains(incorrect_letters_or)]
+        for letter in incorrect_letters:
+            valid_df = valid_df.loc[valid_df[5].str.contains(letter)]
         # select words that don't have not included letters
         if len(self.excluded_letters) != 0:
             for pos in range(5):
