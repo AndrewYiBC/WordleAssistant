@@ -61,7 +61,7 @@ class WordleAssistant:
             elif color == "*":
                 self.included_letters.add(letter)
                 self.correct_pos[pos] = letter
-            self._update_valid_words()
+        self._update_valid_words()
     
 
     def get_valid_words(self, verbose=False) -> list:
