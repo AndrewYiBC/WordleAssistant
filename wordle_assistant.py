@@ -8,6 +8,8 @@ https://www.nytimes.com/games/wordle/index.html
 
 
 import os
+import copy
+import itertools
 import pandas as pd
 
 
@@ -62,12 +64,11 @@ class WordleAssistant:
                 self.included_letters.add(letter)
                 self.correct_pos[pos] = letter
         self._update_valid_words()
-    
 
-    def get_valid_words(self, verbose=False) -> list:
+
+    def get_valid_words(self, verbose=False, lim=10) -> list:
         valid_words_list = self._valid_words[5].to_list()
         if verbose:
-            lim = 10
             count = len(valid_words_list)
             print("There are {:d} valid words".format(count))
             if count > lim:
@@ -77,6 +78,28 @@ class WordleAssistant:
                 for word in valid_words_list:
                     print(word)
         return valid_words_list
+    
+
+    def find_optimal_guesses(self, verbose=False, lim=10) -> dict:
+        valid_words = self.get_valid_words()
+        # generate all possible feedback colors
+        all_possible_colors = list(itertools.product(["*", "o", "x"], repeat=5))
+        # the score of the guess is the average remaining valid words after the guess
+        scores = {}
+        for word in valid_words:
+            scores[word] = self._calc_guess_score(word, all_possible_colors)
+        # sort the words by score in ascending order
+        words_sorted = sorted(scores, key=scores.get)
+        if verbose:
+            count = len(words_sorted)
+            lim = min(count, lim)
+            print("The {:d} most optimal next guesses are:".format(lim))
+            print(" word    average remaining")
+            print("           valid words")
+            for word in words_sorted[:lim]:
+                print("{:s}{:14.2f}".format(word, scores[word]))
+        scores_sorted = {word: scores[word] for word in words_sorted}
+        return scores_sorted
 
 
     def _update_valid_words(self) -> None:
@@ -99,6 +122,24 @@ class WordleAssistant:
             for pos in range(5):
                 valid_df = valid_df.loc[~valid_df[pos].isin(self.excluded_letters)]
         self._valid_words = valid_df.reset_index(drop=True)
+
+
+    def _calc_guess_score(self, word: str, all_possible_colors: list) -> float:
+        remaining_valid_words = []
+        # iterate through all possible feedback colors
+        for colors in all_possible_colors:
+            # Make a deep copy of the current instance before simulating a guess
+            # so the current instance will not be modified
+            next_guess = copy.deepcopy(self)
+            next_guess.guess(word, colors)
+            next_count = next_guess._valid_words.shape[0]
+            # no remaining valid words means the feedback colors are invalid
+            if next_count > 0:
+                remaining_valid_words.append(next_count)
+        # the score is the average remaining valid words
+        # across all valid feedback colors
+        guess_score = sum(remaining_valid_words) / len(remaining_valid_words)
+        return guess_score
 
 
     @staticmethod
