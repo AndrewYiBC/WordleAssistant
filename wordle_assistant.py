@@ -10,7 +10,7 @@ https://www.nytimes.com/games/wordle/index.html
 import os
 import copy
 import itertools
-import pandas as pd
+import numpy as np
 
 
 class WordleAssistant:
@@ -30,8 +30,8 @@ class WordleAssistant:
         # set of letters that are not included in the word (grey tiles)
         self.excluded_letters = set()
 
-        # DataFrame of possible words with 6 columns
-        # each of the first 5 columns is a single letter
+        # 2D array of possible words with 6 columns
+        # each of the first 5 columns is the letter at the corresponding position
         # the last column is the entire 5-letter word
         # the list of possible words (possible_words.txt) is from 3b1b's GitHub:
         # https://github.com/3b1b/videos/tree/master/_2022/wordle
@@ -40,14 +40,14 @@ class WordleAssistant:
             os.path.join("data", "possible_words.txt")
         )
 
-        # DataFrame of valid words with 6 columns
+        # 2D array of valid words with 6 columns
         # valid words is a subset of possible words that
         # satisfies all currently identified information
         self._valid_words = self._possible_words
 
 
     def guess(self, word: str, colors: str) -> None:
-        # iterate through the input word and feedback colors by position
+        # iterate over the input word and feedback colors by position
         for pos in range(5):
             letter = word[pos]
             color = colors[pos]
@@ -67,7 +67,7 @@ class WordleAssistant:
 
 
     def get_valid_words(self, verbose=False, lim=10) -> list:
-        valid_words_list = self._valid_words[5].to_list()
+        valid_words_list = self._valid_words[:, 5].tolist()
         if verbose:
             count = len(valid_words_list)
             print("There are {:d} valid words".format(count))
@@ -104,29 +104,33 @@ class WordleAssistant:
 
     def _update_valid_words(self) -> None:
         incorrect_letters = set()
-        valid_df = self._valid_words
+        valid_array = self._valid_words
         # select words that have included letters at correct positions
         for pos in range(5):
             if self.correct_pos[pos] is not None:
-                valid_df = valid_df.loc[valid_df[pos] == self.correct_pos[pos]]
+                row_indices = valid_array[:, pos] == self.correct_pos[pos]
+                valid_array = valid_array[row_indices, :]
         # select words that don't have included letters at incorrect positions
         for pos in range(5):
             if len(self.incorrect_pos[pos]) != 0:
                 incorrect_letters = incorrect_letters | self.incorrect_pos[pos]
-                valid_df = valid_df.loc[~valid_df[pos].isin(self.incorrect_pos[pos])]
+                row_indices = ~np.isin(valid_array[:, pos], list(self.incorrect_pos[pos]))
+                valid_array = valid_array[row_indices, :]
         # select words that have included letters not at incorrect positions
         for letter in incorrect_letters:
-            valid_df = valid_df.loc[valid_df[5].str.contains(letter)]
+            row_indices = np.char.find(valid_array[:, 5], letter) != -1
+            valid_array = valid_array[row_indices, :]
         # select words that don't have not included letters
         if len(self.excluded_letters) != 0:
             for pos in range(5):
-                valid_df = valid_df.loc[~valid_df[pos].isin(self.excluded_letters)]
-        self._valid_words = valid_df.reset_index(drop=True)
+                row_indices = ~np.isin(valid_array[:, pos], list(self.excluded_letters))
+                valid_array = valid_array[row_indices, :]
+        self._valid_words = valid_array
 
 
     def _calc_guess_score(self, word: str, all_possible_colors: list) -> float:
         remaining_valid_words = []
-        # iterate through all possible feedback colors
+        # iterate over all possible feedback colors
         for colors in all_possible_colors:
             # Make a deep copy of the current instance before simulating a guess
             # so the current instance will not be modified
@@ -143,13 +147,13 @@ class WordleAssistant:
 
 
     @staticmethod
-    def _load_possible_words(path: str) -> pd.DataFrame:
+    def _load_possible_words(path: str) -> np.ndarray:
         with open(path) as f:
             words = f.readlines()
             words = [w.rstrip() for w in words]
             words_split = [list(w) + [w] for w in words]
-            words_df = pd.DataFrame(words_split)
-            return words_df
+            words_array = np.array(words_split)
+            return words_array
 
 
 if __name__ == "__main__":
