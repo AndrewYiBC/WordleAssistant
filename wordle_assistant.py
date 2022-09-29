@@ -66,40 +66,18 @@ class WordleAssistant:
         self._update_valid_words()
 
 
-    def get_valid_words(self, verbose=False, lim=10) -> list:
-        valid_words_list = self._valid_words[:, 5].tolist()
+    def suggest(self, verbose=True, lim=5) -> list[tuple[str, float]]:
+        optimal_guesses = self._find_optimal_guesses()
         if verbose:
-            count = len(valid_words_list)
-            print("There are {:d} valid words".format(count))
-            if count > lim:
-                print("Please refer to the returned list for all valid words")
-            else:
-                print("All valid words:")
-                for word in valid_words_list:
-                    print(word)
-        return valid_words_list
-    
-
-    def find_optimal_guesses(self, verbose=False, lim=10) -> dict:
-        valid_words = self.get_valid_words()
-        # generate all possible feedback colors
-        all_possible_colors = list(itertools.product(["*", "o", "x"], repeat=5))
-        # the score of the guess is the average remaining valid words after the guess
-        scores = {}
-        for word in valid_words:
-            scores[word] = self._calc_guess_score(word, all_possible_colors)
-        # sort the words by score in ascending order
-        words_sorted = sorted(scores, key=scores.get)
-        if verbose:
-            count = len(words_sorted)
+            count = len(optimal_guesses)
+            print("There are {:d} valid words remaining".format(count))
             lim = min(count, lim)
             print("The {:d} most optimal next guesses are:".format(lim))
             print(" word    average remaining")
             print("           valid words")
-            for word in words_sorted[:lim]:
-                print("{:s}{:14.2f}".format(word, scores[word]))
-        scores_sorted = {word: scores[word] for word in words_sorted}
-        return scores_sorted
+            for word, score in optimal_guesses[:lim]:
+                print("{:s}{:14.2f}".format(word, score))
+        return optimal_guesses
 
 
     def _update_valid_words(self) -> None:
@@ -128,6 +106,20 @@ class WordleAssistant:
         self._valid_words = valid_array
 
 
+    def _find_optimal_guesses(self) -> list[tuple[str, float]]:
+        valid_words = self._valid_words[:, 5].tolist()
+        # generate all possible feedback colors
+        all_possible_colors = list(itertools.product(["*", "o", "x"], repeat=5))
+        # the score of the guess is the average remaining valid words after the guess
+        scores = {}
+        for word in valid_words:
+            scores[word] = self._calc_guess_score(word, all_possible_colors)
+        # sort the words by score in ascending order
+        words_sorted = sorted(scores, key=scores.get)
+        optimal_guesses = [(word, scores[word]) for word in words_sorted]
+        return optimal_guesses
+
+
     def _calc_guess_score(self, word: str, all_possible_colors: list) -> float:
         remaining_valid_words = []
         # iterate over all possible feedback colors
@@ -140,8 +132,7 @@ class WordleAssistant:
             # no remaining valid words means the feedback colors are invalid
             if next_count > 0:
                 remaining_valid_words.append(next_count)
-        # the score is the average remaining valid words
-        # across all valid feedback colors
+        # the score is the average remaining valid words across all valid feedback colors
         guess_score = sum(remaining_valid_words) / len(remaining_valid_words)
         return guess_score
 
