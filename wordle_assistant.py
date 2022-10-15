@@ -120,7 +120,7 @@ class WordleAssistant:
         return optimal_guesses
 
 
-    def _calc_guess_score(self, word: str, all_possible_colors: list) -> float:
+    def _calc_guess_score(self, word: str, all_possible_colors: list[str]) -> float:
         remaining_valid_words = []
         # iterate over all possible feedback colors
         for colors in all_possible_colors:
